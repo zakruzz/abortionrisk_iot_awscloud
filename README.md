@@ -15,7 +15,7 @@ How to use AWS IoT Core, S3 Database using ESP32 S3. Deployment Website Static u
 **Server:** AWS IoT Core, AWS S3 Bucket Server
 
 **Library Used:** 
-'''#include "secret.h"
+```#include "secret.h"
 #include <WiFiClientSecure.h>
 #include <PubSubClient.h>
 #include <ArduinoJson.h>
@@ -27,7 +27,8 @@ How to use AWS IoT Core, S3 Database using ESP32 S3. Deployment Website Static u
 #include <Adafruit_MLX90614.h>
 #include "DHT.h"
 #include <time.h>
-#include <MQ135.h>''' 
+#include <MQ135.h>
+```
 
 
 ## Video Tutorial

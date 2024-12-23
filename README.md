@@ -8,11 +8,6 @@ This project using ESP32 S3 to sensing DHT22, MQ135, BMT280, MAX30102, MLX90614 
 
 How to use AWS IoT Core, S3 Database using ESP32 S3. Deployment Website Static using S3 Static Hosting.
 
-
-## Support By
-![Logo](https://kelompok2iot.s3.ap-southeast-1.amazonaws.com/logo-instrumentasi-biru+(2).png)
-
-
 ## Tech Stack
 
 **Client:** HTML,TailwindCSS, Arduino IDE (ino)
@@ -26,6 +21,10 @@ How to use AWS IoT Core, S3 Database using ESP32 S3. Deployment Website Static u
 ## Screenshots
 
 ![App Screenshot](https://kelompok2iot.s3.ap-southeast-1.amazonaws.com/SS_Website.png)
+
+
+## Support By
+![Logo](https://kelompok2iot.s3.ap-southeast-1.amazonaws.com/logo-instrumentasi-biru+(2).png)
 
 
 ## License

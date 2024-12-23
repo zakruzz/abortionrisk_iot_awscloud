@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Realtime Sensor Data</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <!-- Tambahkan DataTables CSS dan JS -->
+    <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.12.1/css/jquery.dataTables.min.css" />
+    <script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/1.12.1/js/jquery.dataTables.min.js"></script>
+  </head>
+  <body class="bg-gray-100">
+    <div class="container mx-auto p-4">
+      <!-- Title -->
+      <h1 class="text-3xl font-semibold text-center text-gray-800 mb-10">Realtime Sensor Data</h1>
+
+      <!-- Timestamp -->
+      <div id="timestamp-display" class="text-center text-gray-700 mb-6">Last Updated: <span id="timestamp">Loading...</span></div>
+      <div id="status-display" class="text-center text-gray-700 mb-6">Status Loading...</div>
+
+      <!-- Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-10">
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700">BMP280</h2>
+          <p id="bmp280-pressure" class="text-xl text-gray-600">Loading...</p>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700">MAX30102</h2>
+          <p id="max30102" class="text-xl text-gray-600">Loading...</p>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700">MLX90614</h2>
+          <p id="mlx90614-ambient" class="text-md text-gray-600">Ambient: Loading...</p>
+          <p id="mlx90614-object" class="text-md text-gray-600">Object: Loading...</p>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700">DHT22</h2>
+          <p id="dht22-temp" class="text-md text-gray-600">Temp: Loading...</p>
+          <p id="dht22-humidity" class="text-md text-gray-600">Humidity: Loading...</p>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700">MQ135 (CO2)</h2>
+          <p id="mq135" class="text-xl text-gray-600">Loading...</p>
+        </div>
+      </div>
+
+      <!-- Charts -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4">BMP280 Pressure</h2>
+          <canvas id="bmp280Chart" class="h-64"></canvas>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4">MAX30102 Heart Rate</h2>
+          <canvas id="max30102Chart" class="h-64"></canvas>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4">MLX90614 Temperature</h2>
+          <canvas id="mlx90614Chart" class="h-64"></canvas>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4">DHT22 Temperature & Humidity</h2>
+          <canvas id="dht22Chart" class="h-64"></canvas>
+        </div>
+        <div class="bg-white shadow-md rounded-lg p-6">
+          <h2 class="text-lg font-semibold text-gray-700 mb-4">MQ135 CO2</h2>
+          <canvas id="mq135Chart" class="h-64"></canvas>
+        </div>
+      </div>
+
+      <!-- Combined Chart -->
+      <div class="bg-white shadow-md rounded-lg p-6 mt-10">
+        <h2 class="text-lg font-semibold text-gray-700 mb-4">Combined Sensor Data</h2>
+        <canvas id="combinedChart" class="h-64"></canvas>
+      </div>
+
+      <!-- Combined Table with Pagination -->
+      <div class="bg-white shadow-md rounded-lg p-6 mt-10">
+        <h2 class="text-lg font-semibold text-gray-700 mb-4">Combined Data Table</h2>
+        <table id="combinedTable" class="w-full text-sm text-left text-gray-500 mt-4 border-collapse border border-gray-300">
+          <thead class="bg-gray-200">
+            <tr>
+              <th class="border border-gray-300 px-4 py-2">Timestamp</th>
+              <th class="border border-gray-300 px-4 py-2">BMP280 Pressure (hPa)</th>
+              <th class="border border-gray-300 px-4 py-2">MAX30102 Heart Rate (bpm)</th>
+              <th class="border border-gray-300 px-4 py-2">Ambient Temp (°C)</th>
+              <th class="border border-gray-300 px-4 py-2">Object Temp (°C)</th>
+              <th class="border border-gray-300 px-4 py-2">DHT22 Temp (°C)</th>
+              <th class="border border-gray-300 px-4 py-2">DHT22 Humidity (%)</th>
+              <th class="border border-gray-300 px-4 py-2">CO2 (ppm)</th>
+            </tr>
+          </thead>
+          <tbody id="combinedTableBody"></tbody>
+        </table>
+        <button id="downloadCsv" class="mt-4 px-4 py-2 bg-gray-400 text-white rounded cursor-not-allowed" disabled>Download CSV</button>
+      </div>
+    </div>
+
+    <script>
+      function showNotification() {
+        if (!('Notification' in window)) {
+          alert('Browser Anda tidak mendukung Notifications API.');
+          return;
+        }
+
+        Notification.requestPermission().then((permission) => {
+          if (permission === 'granted') {
+            const notification = new Notification('Peringatan Bahaya!', {
+              body: 'Klik untuk menghubungi WhatsApp',
+              icon: 'https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1200px-WhatsApp.svg.png',
+            });
+
+            notification.onclick = () => {
+              window.open('https://wa.me/081331058501', '_blank');
+            };
+          }
+        });
+      }
+
+      const S3_BUCKET_URL = 'https://kelompok2iot.s3.ap-southeast-1.amazonaws.com/myKey.json';
+
+      // Data Chart
+      let bmp280ChartData = {
+        labels: [],
+        datasets: [
+          {
+            label: 'BMP280 Pressure (hPa)', // Change the label to reflect pressure
+            data: [],
+            borderColor: 'rgba(255, 99, 132, 1)',
+            fill: false,
+          },
+        ],
+      };
+      let max30102ChartData = { labels: [], datasets: [{ label: 'MAX30102 Heart Rate (bpm)', data: [], borderColor: 'rgba(54, 162, 235, 1)', fill: false }] };
+      let mlx90614ChartData = {
+        labels: [],
+        datasets: [
+          { label: 'Ambient Temp (°C)', data: [], borderColor: 'rgba(75, 192, 192, 1)', fill: false },
+          { label: 'Object Temp (°C)', data: [], borderColor: 'rgba(153, 102, 255, 1)', fill: false },
+        ],
+      };
+      let dht22ChartData = {
+        labels: [],
+        datasets: [
+          { label: 'DHT22 Temp (°C)', data: [], borderColor: 'rgba(255, 206, 86, 1)', fill: false },
+          { label: 'Humidity (%)', data: [], borderColor: 'rgba(54, 162, 235, 0.6)', fill: false },
+        ],
+      };
+      let mq135ChartData = {
+        labels: [],
+        datasets: [{ label: 'CO2 (ppm)', data: [], borderColor: 'rgba(255, 159, 64, 1)', fill: false }],
+      };
+      let combinedChartData = {
+        labels: [],
+        datasets: [
+          { label: 'BMP280 Pressure (hPa)', data: [], borderColor: 'rgba(255, 99, 132, 1)', fill: false },
+          { label: 'MAX30102 Heart Rate (bpm)', data: [], borderColor: 'rgba(54, 162, 235, 1)', fill: false },
+          { label: 'Ambient Temp (°C)', data: [], borderColor: 'rgba(75, 192, 192, 1)', fill: false },
+          { label: 'Object Temp (°C)', data: [], borderColor: 'rgba(153, 102, 255, 1)', fill: false },
+          { label: 'DHT22 Temp (°C)', data: [], borderColor: 'rgba(255, 206, 86, 1)', fill: false },
+          { label: 'DHT22 Humidity (%)', data: [], borderColor: 'rgba(54, 162, 235, 0.6)', fill: false },
+          { label: 'CO2 (ppm)', data: [], borderColor: 'rgba(255, 159, 64, 1)', fill: false },
+        ],
+      };
+
+      let combinedData = [];
+
+      function fetchData() {
+        axios
+          .get(S3_BUCKET_URL)
+          .then((response) => {
+            const data = response.data;
+
+            // Log data yang diambil
+            console.log('Fetched Data:', data);
+
+            console.log(data.timestamp); // Log the value to see its format
+
+            const timestamp = new Date(data.timestamp.replace('Z', '')).toLocaleString('id-ID', {
+              timeZone: 'Asia/Jakarta', // Zona waktu Indonesia
+              hour12: false,
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit',
+              hour: '2-digit',
+              minute: '2-digit',
+              second: '2-digit',
+            });
+            console.log(timestamp);
+
+            // Update Status
+            if (data.status.includes('danger')) {
+              document.getElementById('status-display').innerText = 'Status: Bahaya';
+              document.getElementById('status-display').classList.add('text-red-500'); // Warna merah
+              document.getElementById('status-display').classList.remove('text-green-500'); // Hapus warna hijau jika ada
+              showNotification();
+            } else {
+              document.getElementById('status-display').innerText = 'Status: Aman';
+              document.getElementById('status-display').classList.add('text-green-500'); // Warna hijau
+              document.getElementById('status-display').classList.remove('text-red-500'); // Hapus warna merah jika ada
+            }
+
+            // Update Timestamp
+            document.getElementById('timestamp').innerText = timestamp;
+
+            // Update Cards (hanya untuk pressure BMP280)
+            console.log('BMP280 Pressure to Update:', data.pressure);
+            document.getElementById('bmp280-pressure').innerText = `${data.pressure.toFixed(2)} hPa`;
+
+            console.log('MAX30102 Heart Rate to Update:', data.heartRate);
+            document.getElementById('max30102').innerText = `${data.heartRate.toFixed(2)} bpm`;
+
+            console.log('MLX90614 Ambient Temp to Update:', data.ambientTemp);
+            console.log('MLX90614 Object Temp to Update:', data.objectTemp);
+            document.getElementById('mlx90614-ambient').innerText = `${data.ambientTemp.toFixed(2)}°C`;
+            document.getElementById('mlx90614-object').innerText = `${data.objectTemp.toFixed(2)}°C`;
+
+            console.log('DHT22 Temp to Update:', data.dhtTemp);
+            console.log('DHT22 Humidity to Update:', data.humidity);
+            document.getElementById('dht22-temp').innerText = `${data.dhtTemp.toFixed(2)}°C`;
+            document.getElementById('dht22-humidity').innerText = `${data.humidity.toFixed(2)}%`;
+
+            console.log('MQ135 CO2 to Update:', data.co2);
+            document.getElementById('mq135').innerText = `${data.co2.toFixed(2)} ppm`;
+
+            // Update Charts
+            updateChart(bmp280Chart, bmp280ChartData, data.pressure, timestamp);
+            updateChart(max30102Chart, max30102ChartData, data.heartRate, timestamp);
+            updateChart(mlx90614Chart, mlx90614ChartData, [data.ambientTemp, data.objectTemp], timestamp);
+            updateChart(dht22Chart, dht22ChartData, [data.dhtTemp, data.humidity], timestamp);
+            updateChart(mq135Chart, mq135ChartData, data.co2, timestamp);
+            updateChart(combinedChart, combinedChartData, [data.pressure, data.heartRate, data.ambientTemp, data.objectTemp, data.dhtTemp, data.humidity, data.co2], timestamp);
+
+            // Update Table
+            combinedData.push({
+              timestamp,
+              pressure: data.pressure.toFixed(2),
+              heartRate: data.heartRate.toFixed(2),
+              ambientTemp: data.ambientTemp.toFixed(2),
+              objectTemp: data.objectTemp.toFixed(2),
+              dhtTemp: data.dhtTemp.toFixed(2),
+              humidity: data.humidity.toFixed(2),
+              co2: data.co2.toFixed(2),
+            });
+            updateTable();
+            checkDownloadButton();
+          })
+          .catch((error) => {
+            console.error('Error Fetching Data:', error);
+          });
+      }
+
+      function updateChart(chart, chartData, data, timestamp) {
+        chartData.labels.push(timestamp);
+
+        if (Array.isArray(data)) {
+          data.forEach((value, index) => chartData.datasets[index].data.push(value.toFixed(2)));
+        } else {
+          chartData.datasets[0].data.push(data.toFixed(2));
+        }
+
+        if (chartData.labels.length > 20) {
+          chartData.labels.shift();
+          chartData.datasets.forEach((dataset) => dataset.data.shift());
+        }
+
+        chart.update();
+      }
+
+      function updateTable() {
+        const tableBody = document.getElementById('combinedTableBody');
+        tableBody.innerHTML = ''; // Clear table
+        combinedData.forEach((row) => {
+          const tr = document.createElement('tr');
+          tr.innerHTML = `
+                <td class="border border-gray-300 px-4 py-2">${row.timestamp}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.pressure}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.heartRate}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.ambientTemp}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.objectTemp}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.dhtTemp}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.humidity}</td>
+                <td class="border border-gray-300 px-4 py-2">${row.co2}</td>`;
+          tableBody.appendChild(tr);
+        });
+      }
+
+      function checkDownloadButton() {
+        const downloadButton = document.getElementById('downloadCsv');
+        if (combinedData.length >= 15) {
+          downloadButton.disabled = false;
+          downloadButton.classList.remove('bg-gray-400', 'cursor-not-allowed');
+          downloadButton.classList.add('bg-blue-600');
+        } else {
+          downloadButton.disabled = true;
+          downloadButton.classList.remove('bg-blue-600');
+          downloadButton.classList.add('bg-gray-400', 'cursor-not-allowed');
+        }
+      }
+
+      function downloadCSV() {
+        if (combinedData.length < 15) {
+          alert('You need at least 15 data entries to download!');
+          return;
+        }
+
+        let csvContent = 'data:text/csv;charset=utf-8,';
+        csvContent += 'Timestamp,BMP280 Temp (°C),MAX30102 Heart Rate (bpm),Ambient Temp (°C),Object Temp (°C),DHT22 Temp (°C),DHT22 Humidity (%),CO2 (ppm)\n';
+
+        combinedData.forEach((row) => {
+          csvContent += `${row.timestamp},${row.pressure},${row.heartRate},${row.ambientTemp},${row.objectTemp},${row.dhtTemp},${row.humidity},${row.co2}\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', 'combined_data.csv');
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+
+      document.getElementById('downloadCsv').addEventListener('click', downloadCSV);
+
+      const bmp280Chart = new Chart(document.getElementById('bmp280Chart').getContext('2d'), { type: 'line', data: bmp280ChartData });
+      const max30102Chart = new Chart(document.getElementById('max30102Chart').getContext('2d'), { type: 'line', data: max30102ChartData });
+      const mlx90614Chart = new Chart(document.getElementById('mlx90614Chart').getContext('2d'), { type: 'line', data: mlx90614ChartData });
+      const dht22Chart = new Chart(document.getElementById('dht22Chart').getContext('2d'), { type: 'line', data: dht22ChartData });
+      const mq135Chart = new Chart(document.getElementById('mq135Chart').getContext('2d'), { type: 'line', data: mq135ChartData });
+      const combinedChart = new Chart(document.getElementById('combinedChart').getContext('2d'), { type: 'line', data: combinedChartData });
+
+      setInterval(fetchData, 10000);
+      fetchData();
+    </script>
+  </body>
+</html>

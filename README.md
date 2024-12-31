@@ -37,11 +37,11 @@ How to use AWS IoT Core, S3 Database using ESP32 S3. Deployment Website Static u
 [Click To Show Tutorial](https://www.youtube.com/watch?v=FyplRIMSiEw)
 ## Screenshots
 
-![App Screenshot](https://kelompok2iot.s3.ap-southeast-1.amazonaws.com/SS_Website.png)
+![App Screenshot](https://iotkelompok2.s3.ap-southeast-1.amazonaws.com/SS_Website.png)
 
 
 ## Support By
-![Logo](https://kelompok2iot.s3.ap-southeast-1.amazonaws.com/logo-instrumentasi-biru+(2).png)
+![Logo](https://iotkelompok2.s3.ap-southeast-1.amazonaws.com/logo-instrumentasi-biru+(2).png)
 
 
 ## License
